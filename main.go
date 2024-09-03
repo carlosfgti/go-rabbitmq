@@ -14,6 +14,7 @@ func main() {
 	defer connection.Close()
 
 	connectChannel(connection)
+	ConsumeQueue(connection)
 
 	fmt.Println("Successfully connected to RabbitMQ!")
 }
@@ -53,4 +54,34 @@ func connectChannel(connection *amqp.Connection) {
 
 	fmt.Println("Queue status:", queue)
 	fmt.Println("Successfully published message")
+}
+
+func ConsumeQueue(connection *amqp.Connection) {
+	channel, err := connection.Channel()
+	if err != nil {
+		panic(err)
+	}
+	defer channel.Close()
+
+	msgs, err := channel.Consume(
+		"testing", // queue
+		"",        // consumer
+		true,      // auto ack
+		false,     // exclusive
+		false,     // no local
+		false,     // no wait
+		nil,       //args
+	)
+	if err != nil {
+		panic(err)
+	}
+	forever := make(chan bool)
+	go func() {
+		for msg := range msgs {
+			fmt.Printf("Received Message: %s\n", msg.Body)
+		}
+	}()
+
+	fmt.Println("Waiting for messages...")
+	<-forever
 }
